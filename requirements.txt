@@ -1,0 +1,7 @@
+Flask
+Flask-Mail
+pandas
+openpyxl
+gunicorn
+werkzeug
+blinker
