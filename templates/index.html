@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Multi-Team Daily Shift Handover Portal</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔄</text></svg>">
+    <link href="https://cdnjs.cloudflare.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background-color: #f0f2f5; padding: 20px; }
+        .container { width: 98%; max-width: 1800px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); box-sizing: border-box; overflow: hidden; }
+
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #f8f9fa; padding: 12px 20px; border-radius: 8px; border-left: 6px solid #1F4E78; }
+        .user-badge { font-size: 13px; font-weight: bold; color: #333; }
+        .logout-link { color: #dc3545; text-decoration: none; margin-left: 8px; }
+
+        .team-switcher { display: flex; align-items: center; gap: 10px; background: #e2eaf4; padding: 6px 12px; border-radius: 6px; border: 1px solid #b8daff; }
+        .team-switcher select { padding: 5px 10px; border-radius: 4px; font-weight: bold; border: 1px solid #1F4E78; color: #1F4E78; cursor: pointer; }
+
+        .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .card { background: #f8f9fa; border-left: 5px solid #1F4E78; padding: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s ease-in-out; position: relative; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.12); }
+        .card.active-card { background: #ffffff; box-shadow: 0 0 0 2px #1F4E78, 0 6px 12px rgba(0,0,0,0.1); }
+        .card h4 { margin: 0; color: #6c757d; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card .value { font-size: 26px; font-weight: bold; margin-top: 5px; color: #1F4E78; }
+        .card.pending { border-left-color: #ffc107; }
+        .card.pending.active-card { box-shadow: 0 0 0 2px #ffc107, 0 6px 12px rgba(0,0,0,0.1); }
+        .card.completed { border-left-color: #28a745; }
+        .card.completed.active-card { box-shadow: 0 0 0 2px #28a745, 0 6px 12px rgba(0,0,0,0.1); }
+        .card.date-card { border-left-color: #17a2b8; }
+
+        .analytics-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: #e9ecef; padding: 12px; border-radius: 8px; margin-bottom: 20px; }
+        .sub-stat { background: white; padding: 10px 15px; border-radius: 6px; font-size: 12px; color: #495057; font-weight: 600; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 2px solid transparent; transition: all 0.2s ease-in-out; }
+        .sub-stat:hover { border-color: #1F4E78; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
+        .sub-stat.active-shift-card { border-color: #1F4E78; background: #e2eaf4; }
+        .sub-stat-num { font-size: 16px; font-weight: bold; color: #1F4E78; }
+
+        .nav-tabs { display: flex; border-bottom: 2px solid #1F4E78; margin-bottom: 20px; }
+        .tab-button { padding: 12px 25px; cursor: pointer; border: none; background: #e9ecef; font-weight: bold; border-radius: 6px 6px 0 0; margin-right: 5px; }
+        .tab-button.active { background: #1F4E78; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        .full-width { grid-column: span 3; }
+        label { font-weight: 600; font-size: 13px; color: #333; margin-bottom: 5px; display: block; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 5px; box-sizing: border-box; }
+
+        .table-filter-bar { 
+            display: flex !important; 
+            flex-direction: row !important;
+            align-items: center !important; 
+            justify-content: space-between !important; 
+            gap: 15px !important;
+            margin-bottom: 15px !important; 
+            background: #f8f9fa !important; 
+            padding: 10px 15px !important; 
+            border-radius: 8px !important; 
+            border: 1px solid #e9ecef !important; 
+            flex-wrap: wrap !important;
+        }
+        .filter-group { 
+            display: flex !important; 
+            flex-direction: row !important;
+            align-items: center !important; 
+            gap: 10px !important; 
+            flex-wrap: wrap !important;
+        }
+        .search-box { width: 220px !important; padding: 7px 12px !important; border: 1px solid #ced4da; border-radius: 5px; font-size: 13px; }
+        .date-picker { width: 140px !important; padding: 6px 10px !important; border: 1px solid #ced4da; border-radius: 5px; font-size: 13px; }
+        .current-view-badge { font-weight: bold; color: #1F4E78; background: #e2eaf4; padding: 6px 12px; border-radius: 4px; font-size: 12.5px; white-space: nowrap; }
+
+        .table-container-responsive { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid #dee2e6; margin-bottom: 25px; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        th { background-color: #1F4E78; color: white; padding: 10px 8px; text-align: left; border: 1px solid #dee2e6; white-space: nowrap; }
+        td { padding: 8px; border: 1px solid #dee2e6; vertical-align: middle; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+
+        .badge-priority { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; text-align: center; display: inline-block; }
+        .p-P1 { background-color: #dc3545; color: white; animation: pulse 1.5s infinite; }
+        .p-P2 { background-color: #fd7e14; color: white; }
+        .p-P3 { background-color: #ffc107; color: #212529; }
+        .p-P4 { background-color: #6c757d; color: white; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; display: inline-block; }
+        .badge-PENDING { background-color: #fff3cd; color: #856404; }
+        .badge-IN_PROGRESS { background-color: #cce5ff; color: #004085; }
+        .badge-COMPLETED { background-color: #d4edda; color: #155724; }
+        .badge-CARRIED_FORWARD { background-color: #e2e8f0; color: #475569; }
+
+        .age-badge { padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; display: inline-block; background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; white-space: nowrap; }
+        .age-badge.old-task { background-color: #fef2f2; color: #991b1b; border-color: #fecaca; }
+        .age-badge.done-task { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+        .age-badge.fwd-task { background-color: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+
+        .action-flex { display: flex; gap: 4px; align-items: center; justify-content: center; flex-wrap: nowrap; padding: 2px; }
+        .btn-ent { 
+            padding: 5px 8px; 
+            border-radius: 6px; 
+            font-weight: 600; 
+            font-size: 11px; 
+            text-decoration: none; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 4px; 
+            border: none; 
+            cursor: pointer; 
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            white-space: nowrap;
+        }
+        .btn-ent:hover { transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+        
+        .btn-ent-view { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; }
+        .btn-ent-edit { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; }
+        .btn-ent-delete { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 5px 7px; }
+        .btn-ent-done { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+        .btn-ent-reopen { background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); color: white; }
+        .btn-ent-note { background: #f8fafc; color: #0284c7; border: 1px solid #cbd5e1; padding: 3px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        .btn-ent-note:hover { background: #0284c7; color: white; border-color: #0284c7; }
+
+        .btn-excel { background: linear-gradient(135deg, #15803d 0%, #166534 100%); color: white; padding: 7px 14px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 12.5px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-excel:hover { background: #14532d; color: white; }
+
+        .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content {
+            background: white;
+            width: 680px;
+            margin: 2% auto;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        .detail-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 12px; margin-bottom: 12px; font-size: 13px; }
+        .detail-title { font-weight: bold; color: #1F4E78; margin-bottom: 5px; display: block; font-size: 12px; text-transform: uppercase; }
+        .snow-link { color: #0056b3; font-weight: bold; text-decoration: underline; cursor: pointer; }
+        .snow-link:hover { color: #003366; }
+
+        .team-switch-card {
+            background: linear-gradient(135deg, #1F4E78 0%, #2c3e50 100%);
+            color: #ffffff;
+            padding: 6px 16px;
+            border-radius: 30px;
+            box-shadow: 0 4px 12px rgba(31, 78, 120, 0.25);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .team-switch-card label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #e0f2fe;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .team-switch-select {
+            background-color: #ffffff !important;
+            color: #1F4E78 !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            border-radius: 20px !important;
+            padding: 5px 30px 5px 14px !important;
+            border: none !important;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .team-switch-select:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .notes-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 6px 10px; border-radius: 4px; font-size: 12px; color: #873800; max-width: 180px; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-bar">
+            <div>
+                <h2 style="margin:0; color:#1F4E78;">ITConvergence Shift Handover Portal</h2>
+                <small style="color:#6c757d; font-weight:600;">Active Context: <span style="color:#1F4E78; font-size:14px;"><b>{{ active_team }}</b></span></small>
+            </div>
+
+            {% if user_role in ['ADMIN', 'LEAD'] %}
+            <form action="/switch_team" method="POST" id="teamSwitchForm" class="d-inline-block">
+                <div class="team-switch-card">
+                    <label for="teamSelect">
+                        <span style="font-size: 15px;">🌐</span>
+                        <span>Active Scope:</span>
+                    </label>
+                    <select name="selected_team" id="teamSelect" class="form-select team-switch-select" onchange="document.getElementById('teamSwitchForm').submit();">
+                        <option value="ALL_TEAMS" {% if active_team == 'ALL_TEAMS' %}selected{% endif %}>🌟 ALL TEAMS (Global View)</option>
+                        {% for t in teams_list %}
+                        <option value="{{ t }}" {% if active_team == t %}selected{% endif %}>🏢 {{ t }} Team</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+            {% endif %}
+
+            <div class="user-badge">
+                👤 Logged in as: <span style="color:#1F4E78;">{{ current_user }}</span> (<b>{{ user_role }}</b> - <i>{{ user_team }}</i>) |
+                <a href="/logout" class="logout-link">Logout 🚪</a>
+            </div>
+        </div>
+
+        <!-- TOP KPI TAB CARDS -->
+        <div class="metrics-grid">
+            <div class="card" id="card-ALL" onclick="selectCardTab('ALL')" title="Click to view all tasks history">
+                <h4>Total Handover Tasks 📂</h4>
+                <div class="value">{{ total_count }}</div>
+            </div>
+            <div class="card pending" id="card-PENDING" onclick="selectCardTab('PENDING')" title="Click to filter pending and in-progress tasks">
+                <h4>Pending Tasks ⏳</h4>
+                <div class="value" style="color:#d9534f;">{{ pending_count }}</div>
+            </div>
+            <div class="card completed" id="card-COMPLETED" onclick="selectCardTab('COMPLETED')" title="Click to filter completed tasks">
+                <h4>Completed Tasks ✅</h4>
+                <div class="value" style="color:#28a745;">{{ completed_count }}</div>
+            </div>
+            <div class="card date-card" id="card-TODAY" onclick="selectCardTab('TODAY')" title="Click to view today's tasks">
+                <h4>Today's Date 📅</h4>
+                <div class="value" style="font-size:18px; margin-top:8px;">{{ current_date }}</div>
+            </div>
+        </div>
+
+        <!-- CLICKABLE SHIFT ANALYTICS BREAKDOWN -->
+        <div class="analytics-bar">
+            <div class="sub-stat" id="shift-card-MORNING" onclick="filterByShift('MORNING SHIFT TASKS')" title="Click to filter Morning Shift tasks">
+                🌅 Morning Shift <span class="sub-stat-num">{{ morning_count }}</span>
+            </div>
+            <div class="sub-stat" id="shift-card-AFTERNOON" onclick="filterByShift('AFTERNOON SHIFT TASKS')" title="Click to filter Afternoon Shift tasks">
+                🌆 Afternoon Shift <span class="sub-stat-num">{{ afternoon_count }}</span>
+            </div>
+            <div class="sub-stat" id="shift-card-NIGHT" onclick="filterByShift('NIGHT SHIFT TASKS')" title="Click to filter Night Shift tasks">
+                🌙 Night Shift <span class="sub-stat-num">{{ night_count }}</span>
+            </div>
+            <div class="sub-stat" id="shift-card-CRITICAL" onclick="filterByShift('CRITICAL')" style="border-left: 3px solid #dc3545;" title="Click to filter Critical P1/P2 tasks">
+                🚨 Open P1/P2 Critical <span class="sub-stat-num" style="color:#dc3545;">{{ critical_p12_count }}</span>
+            </div>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="tab-button active" onclick="openTab('history-tab', this)">📊 Task History & Live Status</button>
+            <button class="tab-button" onclick="openTab('form-tab', this)">➕ New Shift Handover Entry</button>
+            <button class="tab-button" onclick="openTab('audit-tab', this)">📜 Audit & History Logs</button>
+            {% if user_role == 'ADMIN' %}
+            <button class="tab-button" onclick="openTab('users-tab', this)" style="background:#17a2b8; color:white;">⚙️ User Management</button>
+            <button class="tab-button" onclick="openTab('teams-tab', this)" style="background:#28a745; color:white;">🏢 Manage Teams</button>
+            {% endif %}
+        </div>
+
+        <!-- TAB 1: HISTORY -->
+        <div id="history-tab" class="tab-content active">
+            <div class="table-filter-bar">
+                <div class="filter-group">
+                    <input type="text" id="searchInput" onkeyup="filterTable()" class="search-box" placeholder="🔍 Search Ticket, Customer...">
+                    <label style="margin:0; font-weight:bold; font-size:12.5px;">Filter Date:</label>
+                    <input type="date" id="dateFilter" onchange="onDatePickerChange()" class="date-picker">
+                    <input type="hidden" id="statusCardFilter" value="TODAY">
+                    <input type="hidden" id="shiftFilterVal" value="ALL">
+                    <span class="current-view-badge" id="viewLabel">Viewing: Today's Tasks</span>
+                    <button onclick="resetAllFilters()" class="btn-ent" style="background:#6c757d; color:white; padding:6px 10px;">Reset to Today</button>
+                </div>
+                <a href="/export_shift_excel" class="btn-excel"><i class="fa-solid fa-file-excel"></i> Export {{ active_team }} Excel Sheet</a>
+            </div>
+
+            <div class="table-container-responsive">
+                <table id="taskTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Priority</th>
+                            <th>Team</th>
+                            <th>Shift</th>
+                            <th>Customer</th>
+                            <th>Ticket#</th>
+                            <th>Task Description</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Status</th>
+                            <th>Task Age ⏳</th>
+                            <th>Shift Handover Notes 📝</th>
+                            <th>Logged At</th>
+                            <th style="min-width: 220px; text-align: center;">Quick Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                        <tr>
+                            <td><b class="daily-seq-id" data-created="{{ task['created_at'][:10] }}">#{{ loop.index }}</b></td>
+                            <td><span class="badge-priority p-{{ task['priority'] if task['priority'] else 'P3' }} task-prio-val">{{ task['priority'] if task['priority'] else 'P3' }}</span></td>
+                            <td><b style="color:#1F4E78;">{{ task['team_name'] if task['team_name'] else 'Hosting' }}</b></td>
+                            <td><b class="task-shift-val">{{ task['shift_name'] }}</b></td>
+                            <td>{{ task['customer'] }}</td>
+                            <td>
+                                <a onclick="openServiceNowTicket('{{ task['ticket_no'] }}')" class="snow-link" title="Click to open ticket in ServiceNow"><code>{{ task['ticket_no'] }}</code></a>
+                            </td>
+                            <td class="task-desc-cell">{{ task['task_description'] }}</td>
+                            <td>{{ task['resource_from'] }}</td>
+                            <td>{{ task['resource_to'] }}</td>
+                            <td><span class="badge badge-{{ task['status'] }} task-status-val">{{ task['status'] }}</span></td>
+                            
+                            <!-- STATUS-AWARE TASK AGE COLUMN -->
+                            <td style="text-align:center;">
+                                <span class="task-age-rendered" 
+                                      data-status="{{ task['status'] }}"
+                                      data-origdate="{{ task['original_created_at'] if ('original_created_at' in task.keys() and task['original_created_at']) else task['created_at'] }}"
+                                      data-loggeddate="{{ task['created_at'] }}"></span>
+                            </td>
+
+                            <!-- Handover Notes Column -->
+                            <td>
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="notes-box">
+                                        {{ task['handover_notes'] if ('handover_notes' in task.keys() and task['handover_notes']) else '<em style="color:#999;">No notes added</em>'|safe }}
+                                    </div>
+                                    {% if task['status'] not in ['COMPLETED', 'CARRIED_FORWARD'] %}
+                                    <button onclick="openNoteModal('{{ task['id'] }}', '{{ task['ticket_no'] }}', `{{ task['handover_notes'] if ('handover_notes' in task.keys() and task['handover_notes']) else '' }}`)" 
+                                            class="btn-ent-note" title="Quick Edit Notes"><i class="fa-solid fa-pen"></i></button>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <td><small class="task-date">{{ task['created_at'] }}</small></td>
+                            <td>
+                                <div class="action-flex">
+                                    <button data-id="{{ task['id'] }}"
+                                            data-shift="{{ task['shift_name'] }}"
+                                            data-customer="{{ task['customer'] }}"
+                                            data-ticket="{{ task['ticket_no'] }}"
+                                            data-desc="{{ task['task_description'] }}"
+                                            data-from="{{ task['resource_from'] }}"
+                                            data-to="{{ task['resource_to'] }}"
+                                            data-status="{{ task['status'] }}"
+                                            data-comments="{{ task['comments'] if task['comments'] else '' }}"
+                                            data-notes="{{ task['handover_notes'] if ('handover_notes' in task.keys() and task['handover_notes']) else '' }}"
+                                            data-priority="{{ task['priority'] if task['priority'] else 'P3' }}"
+                                            data-logged="{{ task['created_at'] }}"
+                                            data-origdate="{{ task['original_created_at'] if ('original_created_at' in task.keys() and task['original_created_at']) else task['created_at'] }}"
+                                            onclick="openTaskViewModal(this)"
+                                            class="btn-ent btn-ent-view"><i class="fa-solid fa-eye"></i> View</button>
+
+                                    {% if task['status'] not in ['COMPLETED', 'CARRIED_FORWARD'] %}
+                                    <button data-id="{{ task['id'] }}"
+                                            data-shift="{{ task['shift_name'] }}"
+                                            data-customer="{{ task['customer'] }}"
+                                            data-ticket="{{ task['ticket_no'] }}"
+                                            data-desc="{{ task['task_description'] }}"
+                                            data-from="{{ task['resource_from'] }}"
+                                            data-to="{{ task['resource_to'] }}"
+                                            data-status="{{ task['status'] }}"
+                                            data-comments="{{ task['comments'] if task['comments'] else '' }}"
+                                            data-notes="{{ task['handover_notes'] if ('handover_notes' in task.keys() and task['handover_notes']) else '' }}"
+                                            data-priority="{{ task['priority'] if task['priority'] else 'P3' }}"
+                                            onclick="openTaskEditModal(this)"
+                                            class="btn-ent btn-ent-edit"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+                                    <a href="/delete_task/{{ task['id'] }}" onclick="return confirm('Delete this entry?')" class="btn-ent btn-ent-delete" title="Delete Task"><i class="fa-solid fa-trash-can"></i></a>
+                                    <a href="/update_status/{{ task['id'] }}/COMPLETED" class="btn-ent btn-ent-done"><i class="fa-solid fa-check"></i> Done</a>
+                                    
+                                    {% elif user_role in ['ADMIN', 'LEAD'] and task['status'] == 'COMPLETED' %}
+                                    <a href="/update_status/{{ task['id'] }}/PENDING" onclick="return confirm('Reopen this completed task back to PENDING?')" class="btn-ent btn-ent-reopen" title="Reopen Task"><i class="fa-solid fa-rotate-left"></i> Reopen</a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 2: FORM -->
+        <div id="form-tab" class="tab-content">
+            <form action="/add_shift_task" method="POST">
+                <div class="form-grid">
+                    <div>
+                        <label>Priority Level:</label>
+                        <select name="priority" id="add_priority_select" onchange="toggleEmailInput('add')" required>
+                            <option value="P3">P3 - Medium (Default)</option>
+                            <option value="P1">P1 - Critical / Outage 🚨 (Auto Mail)</option>
+                            <option value="P2">P2 - High Priority ⚠️ (Auto Mail)</option>
+                            <option value="P4">P4 - Low / Informational</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Shift Name:</label>
+                        <select name="shift_name" required>
+                            <option value="MORNING SHIFT TASKS">MORNING SHIFT TASKS</option>
+                            <option value="AFTERNOON SHIFT TASKS">AFTERNOON SHIFT TASKS</option>
+                            <option value="NIGHT SHIFT TASKS">NIGHT SHIFT TASKS</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Customer Name:</label>
+                        <input type="text" name="customer" placeholder="e.g. ULTRAGENYX" required>
+                    </div>
+                    <div>
+                        <label>Ticket# / SCTASK:</label>
+                        <input type="text" name="ticket_no" placeholder="e.g. INC0086228" required>
+                    </div>
+                    <div>
+                        <label>Handover From (Logged In User):</label>
+                        <input type="text" name="resource_from" value="{{ current_user }}" readonly style="background:#e9ecef;">
+                    </div>
+                    <div>
+                        <label>Handover To (Assignee Name):</label>
+                        <input type="text" name="resource_to" placeholder="e.g. Manoj" required>
+                    </div>
+                    <div id="add_email_container" style="display:none; background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeba2;">
+                        <label style="color:#856404;">📧 Assignee Email (For P1/P2 Alert Mail):</label>
+                        <input type="email" name="assignee_email" placeholder="e.g. engineer@itconvergence.com">
+                    </div>
+                    <div>
+                        <label>Initial Status:</label>
+                        <select name="status">
+                            <option value="PENDING">PENDING</option>
+                            <option value="IN_PROGRESS">IN PROGRESS</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                        </select>
+                    </div>
+                    <div class="full-width">
+                        <label>Task Description & Instructions:</label>
+                        <textarea name="task_description" rows="3" required></textarea>
+                    </div>
+                    <div class="full-width">
+                        <label>Shift Handover Notes (For Next Shift Engineer):</label>
+                        <input type="text" name="handover_notes" placeholder="e.g. Progress updates or instructions for the next shift engineer">
+                    </div>
+                    <div class="full-width">
+                        <label>Comments / Work Notes / Playbook Links:</label>
+                        <input type="text" name="comments" placeholder="e.g. Memory spike checked at 10 PM; reboot pending">
+                    </div>
+                </div>
+                <button type="submit" style="background-color:#1F4E78; color:white; border:none; border-radius:5px; width:100%; margin-top:15px; padding:12px; font-size:14px; font-weight:bold; cursor:pointer;">Submit Handover Task for {{ active_team }} Team</button>
+            </form>
+        </div>
+
+        <!-- TAB 3: AUDIT LOGS -->
+        <div id="audit-tab" class="tab-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="color:#1F4E78; margin:0;">System Activity & Change History Log</h3>
+                <input type="text" id="auditSearchInput" onkeyup="filterAuditTable()" class="search-box" placeholder="🔍 Search Ticket#, Task ID, Action, User...">
+            </div>
+            <table id="auditTable">
+                <thead>
+                    <tr>
+                        <th>Log ID</th>
+                        <th>Task ID</th>
+                        <th>Action Type</th>
+                        <th>Action Details</th>
+                        <th>Performed By</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in audit_logs %}
+                    <tr>
+                        <td>#{{ log['id'] }}</td>
+                        <td><b>#{{ log['task_id'] }}</b></td>
+                        <td><span class="badge" style="background:#e2e6ea; color:#333;">{{ log['action_type'] }}</span></td>
+                        <td>{{ log['details'] }}</td>
+                        <td><b style="color:#1F4E78;">👤 {{ log['performed_by'] }}</b></td>
+                        <td><small>{{ log['created_at'] }}</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TAB 4: USER MANAGEMENT -->
+        {% if user_role == 'ADMIN' %}
+        <div id="users-tab" class="tab-content">
+            <h3 style="color:#1F4E78;">Manage Team Accounts & Access Permissions</h3>
+            <form action="/add_user" method="POST" style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <h4 style="margin-top:0;">Add New Team Engineer</h4>
+                <div class="form-grid">
+                    <div>
+                        <label>Username:</label>
+                        <input type="text" name="username" placeholder="e.g. jdoe" required>
+                    </div>
+                    <div>
+                        <label>Full Name:</label>
+                        <input type="text" name="full_name" placeholder="e.g. John Doe" required>
+                    </div>
+                    <div>
+                        <label>Company Email (For Temp Password Mail):</label>
+                        <input type="email" name="email" placeholder="e.g. jdoe@itconvergence.com" required>
+                    </div>
+                    <div>
+                        <label>Assigned Team:</label>
+                        <select name="team_name" required>
+                            {% for t in teams_list %}
+                            <option value="{{ t }}">{{ t }} Team</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label>Access Role Permission:</label>
+                        <select name="role">
+                            <option value="ENGINEER">ENGINEER (Standard Access)</option>
+                            <option value="LEAD">LEAD (Cross-Team View Access)</option>
+                            <option value="ADMIN">ADMIN (Full Portal Admin)</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" style="background:#28a745; color:white; border:none; border-radius:4px; padding:10px 20px; font-weight:bold; margin-top:15px; cursor:pointer;">+ Create Account & Dispatch Email</button>
+            </form>
+
+            <table id="userTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Email Address</th>
+                        <th>Assigned Team</th>
+                        <th>Role Permissions</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users_list %}
+                    <tr>
+                        <td>#{{ u['id'] }}</td>
+                        <td><b>{{ u['username'] }}</b></td>
+                        <td>{{ u['full_name'] }}</td>
+                        <td><small>{{ u['email'] if u['email'] else 'N/A' }}</small></td>
+                        <td><b style="color:#1F4E78;">{{ u['team_name'] if u['team_name'] else 'Hosting' }}</b></td>
+                        <td><span class="badge" style="background: {{ '#1F4E78' if u['role'] == 'ADMIN' else '#17a2b8' }}; color:white;">{{ u['role'] }}</span></td>
+                        <td><small>{{ u['created_at'] }}</small></td>
+                        <td>
+                            <div class="action-flex">
+                                <button data-userid="{{ u['id'] }}"
+                                        data-username="{{ u['username'] }}"
+                                        data-fullname="{{ u['full_name'] }}"
+                                        data-email="{{ u['email'] if u['email'] else '' }}"
+                                        data-team="{{ u['team_name'] if u['team_name'] else 'Hosting' }}"
+                                        data-role="{{ u['role'] }}"
+                                        onclick="openEditUserModal(this)"
+                                        class="btn-ent btn-ent-edit"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+
+                                <form action="/reset_user_password" method="POST" style="margin:0;">
+                                    <input type="hidden" name="user_id" value="{{ u['id'] }}">
+                                    <button type="submit" onclick="return confirm('Send fresh temporary password email?')" class="btn-ent btn-ent-view"><i class="fa-solid fa-key"></i> Temp Pass</button>
+                                </form>
+
+                                {% if u['username'] != 'admin' %}
+                                <a href="/delete_user/{{ u['id'] }}" onclick="return confirm('Remove user account?')" class="btn-ent btn-ent-delete"><i class="fa-solid fa-trash-can"></i></a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TAB 5: DYNAMIC TEAMS MANAGEMENT -->
+        <div id="teams-tab" class="tab-content">
+            <h3 style="color:#1F4E78;">🏢 Dynamic Team Management</h3>
+            <form action="/add_team" method="POST" style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:20px; width:450px;">
+                <h4 style="margin-top:0;">+ Create New Team / Department</h4>
+                <div>
+                    <label>Team Name (e.g. Storage, Security):</label>
+                    <input type="text" name="new_team_name" placeholder="e.g. Storage Team" required>
+                </div>
+                <button type="submit" style="background:#28a745; color:white; border:none; border-radius:4px; padding:10px 20px; font-weight:bold; margin-top:12px; cursor:pointer;">Add Team to Portal</button>
+            </form>
+
+            <h4 style="color:#1F4E78;">Configured Active Teams</h4>
+            <table style="width:500px;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Team Name</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in teams_list %}
+                    <tr>
+                        <td>#{{ loop.index }}</td>
+                        <td><b>{{ t }} Team</b></td>
+                        <td>
+                            {% if t not in ['Hosting', 'DBA'] %}
+                            <a href="/delete_team/{{ loop.index }}" onclick="return confirm('Delete team {{ t }}?')" class="btn-ent btn-ent-delete">Remove Team</a>
+                            {% else %}
+                            <small style="color:#6c757d;">Primary Core Team</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Edit Handover Notes Modal -->
+    <div id="quickNoteModal" class="modal">
+        <div class="modal-content" style="width:500px;">
+            <h3 style="margin-top:0; color:#1F4E78;">Update Handover Notes (<span id="modal_ticket_no"></span>)</h3>
+            <form action="/update_notes" method="POST">
+                <input type="hidden" name="task_id" id="modal_task_id">
+                <div style="margin-bottom:15px;">
+                    <label>Next Shift Notes / Work Updates:</label>
+                    <textarea name="handover_notes" id="modal_handover_notes" rows="4" placeholder="Enter notes or updates for the next shift engineer..."></textarea>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button type="submit" style="background:#28a745; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer; flex:1;">Save Notes</button>
+                    <button type="button" onclick="closeNoteModal()" style="background:#6c757d; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Details Modal -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #1F4E78; padding-bottom:10px; margin-bottom:15px;">
+                <h3 style="margin:0; color:#1F4E78;">Task Handover Details & Work Notes</h3>
+                <span id="view_prio_badge"></span>
+            </div>
+
+            <div class="form-grid" style="margin-bottom:15px;">
+                <div class="detail-box">
+                    <span class="detail-title">Ticket# / Customer</span>
+                    <span id="view_ticket_cust" style="font-size:15px; color:#333;"></span>
+                </div>
+                <div class="detail-box">
+                    <span class="detail-title">Shift & Handover Route</span>
+                    <span id="view_shift_route"></span>
+                </div>
+                <div class="detail-box">
+                    <span class="detail-title">Current Status / Created At</span>
+                    <span id="view_status_date"></span>
+                </div>
+            </div>
+
+            <div class="detail-box" style="background:#eef2f7;">
+                <span class="detail-title">Detailed Task Description & Instructions</span>
+                <p id="view_desc" style="white-space: pre-wrap; margin:5px 0; color:#212529; font-size:14px; line-height:1.5;"></p>
+            </div>
+
+            <div class="detail-box" style="background:#fffbe6; border-color:#ffe8cc;">
+                <span class="detail-title" style="color:#d97706;">📝 Shift Handover Notes (For Next Shift)</span>
+                <p id="view_notes" style="white-space: pre-wrap; margin:5px 0; color:#854d0e; font-size:13px; font-weight:600;"></p>
+            </div>
+
+            <div class="detail-box" style="background:#f8f9fa;">
+                <span class="detail-title">Engineer Work Notes & Playbook Comments</span>
+                <p id="view_comments" style="white-space: pre-wrap; margin:5px 0; color:#451a03; font-size:13px;"></p>
+            </div>
+
+            <div style="margin-top:20px; text-align:right;">
+                <button type="button" onclick="closeViewModal()" style="background:#1F4E78; color:white; border:none; padding:10px 25px; border-radius:4px; font-weight:bold; cursor:pointer;">Close Window</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">Edit Shift Handover Task</h3>
+            <form action="/edit_task" method="POST">
+                <input type="hidden" name="task_id" id="edit_task_id">
+                <div class="form-grid">
+                    <div>
+                        <label>Priority:</label>
+                        <select name="priority" id="edit_priority" onchange="toggleEmailInput('edit')" required>
+                            <option value="P1">P1 - Critical / Outage 🚨 (Auto Mail)</option>
+                            <option value="P2">P2 - High Priority ⚠️ (Auto Mail)</option>
+                            <option value="P3">P3 - Medium</option>
+                            <option value="P4">P4 - Low</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Shift Name:</label>
+                        <select name="shift_name" id="edit_shift_name" required>
+                            <option value="MORNING SHIFT TASKS">MORNING SHIFT TASKS</option>
+                            <option value="AFTERNOON SHIFT TASKS">AFTERNOON SHIFT TASKS</option>
+                            <option value="NIGHT SHIFT TASKS">NIGHT SHIFT TASKS</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Customer Name:</label>
+                        <input type="text" name="customer" id="edit_customer" required>
+                    </div>
+                    <div>
+                        <label>Ticket#:</label>
+                        <input type="text" name="ticket_no" id="edit_ticket_no" required>
+                    </div>
+                    <div>
+                        <label>Status:</label>
+                        <select name="status" id="edit_status">
+                            <option value="PENDING">PENDING</option>
+                            <option value="IN_PROGRESS">IN PROGRESS</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="CARRIED_FORWARD">CARRIED_FORWARD</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Handover From (Editor):</label>
+                        <input type="text" name="resource_from" id="edit_resource_from" value="{{ current_user }}" readonly style="background:#e9ecef;">
+                    </div>
+                    <div>
+                        <label>Handover To (Assignee Name):</label>
+                        <input type="text" name="resource_to" id="edit_resource_to" required>
+                    </div>
+                    <div id="edit_email_container" class="full-width" style="display:none; background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeba2;">
+                        <label style="color:#856404;">📧 Assignee Email (For Critical P1/P2 Alert Email):</label>
+                        <input type="email" name="assignee_email" id="edit_assignee_email" placeholder="e.g. engineer@itconvergence.com">
+                    </div>
+                    <div class="full-width">
+                        <label>Task Description:</label>
+                        <textarea name="task_description" id="edit_task_description" rows="3" required></textarea>
+                    </div>
+                    <div class="full-width">
+                        <label>Shift Handover Notes:</label>
+                        <input type="text" name="handover_notes" id="edit_handover_notes">
+                    </div>
+                    <div class="full-width">
+                        <label>Comments / Append Progress Work Notes:</label>
+                        <input type="text" name="comments" id="edit_comments">
+                    </div>
+                </div>
+                <div style="margin-top:20px; margin-bottom:10px; display:flex; gap:10px;">
+                    <button type="submit" style="background:#28a745; color:white; border:none; padding:12px; border-radius:4px; font-weight:bold; cursor:pointer; flex:1;">Save Changes</button>
+                    <button type="button" onclick="closeEditModal()" style="background:#6c757d; color:white; border:none; padding:12px; border-radius:4px; font-weight:bold; cursor:pointer;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content" style="width: 500px;">
+            <h3 style="margin-top:0; color:#1F4E78;">Edit User Details & Assigned Team</h3>
+            <form action="/edit_user" method="POST">
+                <input type="hidden" name="user_id" id="edit_user_id">
+                <div style="margin-bottom: 12px;">
+                    <label>Username (Read-Only):</label>
+                    <input type="text" id="edit_user_username" readonly style="background:#e9ecef; font-weight:bold;">
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label>Full Name:</label>
+                    <input type="text" name="full_name" id="edit_user_fullname" required>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label>Company Email Address:</label>
+                    <input type="email" name="email" id="edit_user_email" required>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label>Assigned Team:</label>
+                    <select name="team_name" id="edit_user_team" required>
+                        {% for t in teams_list %}
+                        <option value="{{ t }}">{{ t }} Team</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label>Access Role Permission:</label>
+                    <select name="role" id="edit_user_role" required>
+                        <option value="ENGINEER">ENGINEER (Standard Access)</option>
+                        <option value="LEAD">LEAD (Cross-Team View Access)</option>
+                        <option value="ADMIN">ADMIN (Full Portal Admin)</option>
+                    </select>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button type="submit" style="background:#28a745; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer; flex:1;">Save User Updates</button>
+                    <button type="button" onclick="closeEditUserModal()" style="background:#6c757d; color:white; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            var today = new Date().toISOString().split('T')[0];
+            document.getElementById("dateFilter").value = today;
+
+            renderTaskAges();
+            resequenceDailyIDs();
+
+            if (window.location.hash === '#users-tab') {
+                var userTabBtn = document.querySelector("button[onclick*='users-tab']");
+                if (userTabBtn) openTab('users-tab', userTabBtn);
+            } else if (window.location.hash === '#teams-tab') {
+                var teamTabBtn = document.querySelector("button[onclick*='teams-tab']");
+                if (teamTabBtn) openTab('teams-tab', teamTabBtn);
+            } else {
+                selectCardTab('TODAY');
+            }
+        };
+
+        function resequenceDailyIDs() {
+            var rows = document.querySelectorAll('#taskTable tbody tr');
+            var dateMap = {};
+
+            rows.forEach(tr => {
+                var seqEl = tr.querySelector('.daily-seq-id');
+                if (seqEl) {
+                    var dt = seqEl.getAttribute('data-created');
+                    if (!dateMap[dt]) {
+                        dateMap[dt] = 1;
+                    } else {
+                        dateMap[dt]++;
+                    }
+                    seqEl.innerText = '#' + dateMap[dt];
+                }
+            });
+        }
+
+        function renderTaskAges() {
+            var ageElements = document.querySelectorAll('.task-age-rendered');
+
+            ageElements.forEach(el => {
+                var status = el.getAttribute('data-status');
+                var origStr = el.getAttribute('data-origdate');
+                var loggedStr = el.getAttribute('data-loggeddate') || '';
+
+                var startStr = (origStr && origStr !== 'None') ? origStr : loggedStr;
+                
+                if (startStr) {
+                    var startParts = startStr.split(' ')[0].split('-');
+                    var loggedParts = loggedStr ? loggedStr.split(' ')[0].split('-') : startParts;
+
+                    if (startParts.length === 3 && loggedParts.length === 3) {
+                        var startDate = new Date(parseInt(startParts[0]), parseInt(startParts[1]) - 1, parseInt(startParts[2]));
+                        var loggedDate = new Date(parseInt(loggedParts[0]), parseInt(loggedParts[1]) - 1, parseInt(loggedParts[2]));
+                        
+                        var today = new Date();
+                        var todayClean = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+                        if (status === 'COMPLETED') {
+                            var durationTime = loggedDate - startDate;
+                            var durationDays = Math.floor(durationTime / (1000 * 60 * 60 * 24));
+
+                            if (durationDays <= 0) {
+                                el.innerHTML = "<span class='age-badge done-task'>Same Day ✅</span>";
+                            } else if (durationDays === 1) {
+                                el.innerHTML = "<span class='age-badge done-task'>Closed in 1 Day ✅</span>";
+                            } else {
+                                el.innerHTML = "<span class='age-badge done-task'>Closed in " + durationDays + " Days ✅</span>";
+                            }
+                            return;
+                        }
+
+                        if (status === 'CARRIED_FORWARD') {
+                            el.innerHTML = "<span class='age-badge fwd-task'>Forwarded ➔</span>";
+                            return;
+                        }
+
+                        var diffTime = todayClean - startDate;
+                        var diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                        var dateOnlyStr = startParts[0] + '-' + startParts[1] + '-' + startParts[2];
+
+                        if (diffDays <= 0) {
+                            el.innerHTML = "<span class='age-badge'>Today</span>";
+                        } else if (diffDays === 1) {
+                            el.innerHTML = "<span class='age-badge old-task'>1 Day Old<br><small>(" + dateOnlyStr + ")</small></span>";
+                        } else {
+                            el.innerHTML = "<span class='age-badge old-task'>" + diffDays + " Days Old<br><small>(" + dateOnlyStr + ")</small></span>";
+                        }
+                        return;
+                    }
+                }
+
+                if (status === 'COMPLETED') {
+                    el.innerHTML = "<span class='age-badge done-task'>Completed ✅</span>";
+                } else if (status === 'CARRIED_FORWARD') {
+                    el.innerHTML = "<span class='age-badge fwd-task'>Forwarded ➔</span>";
+                } else {
+                    el.innerHTML = "<span class='age-badge'>Today</span>";
+                }
+            });
+        }
+
+        function openNoteModal(taskId, ticketNo, currentNotes) {
+            document.getElementById('modal_task_id').value = taskId;
+            document.getElementById('modal_ticket_no').innerText = ticketNo;
+            document.getElementById('modal_handover_notes').value = currentNotes;
+            document.getElementById('quickNoteModal').style.display = 'block';
+        }
+
+        function closeNoteModal() {
+            document.getElementById('quickNoteModal').style.display = 'none';
+        }
+
+        function toggleEmailInput(mode) {
+            if (mode === 'add') {
+                var prio = document.getElementById("add_priority_select").value;
+                var container = document.getElementById("add_email_container");
+                container.style.display = (prio === 'P1' || prio === 'P2') ? 'block' : 'none';
+            } else if (mode === 'edit') {
+                var prio = document.getElementById("edit_priority").value;
+                var container = document.getElementById("edit_email_container");
+                container.style.display = (prio === 'P1' || prio === 'P2') ? 'block' : 'none';
+            }
+        }
+
+        function openServiceNowTicket(ticketNo) {
+            var upperTicket = ticketNo.toUpperCase();
+            var targetUri = "";
+
+            if (upperTicket.startsWith("SCTASK")) {
+                targetUri = "sc_task.do?sysparm_query=number=" + upperTicket;
+            } else if (upperTicket.startsWith("INC")) {
+                targetUri = "incident.do?sysparm_query=number=" + upperTicket;
+            } else if (upperTicket.startsWith("RITM")) {
+                targetUri = "sc_req_item.do?sysparm_query=number=" + upperTicket;
+            } else {
+                targetUri = "text_search_exact.do?sysparm_search=" + upperTicket;
+            }
+
+            var fullUrl = "https://itconvergence.service-now.com/nav_to.do?uri=" + encodeURIComponent(targetUri);
+            window.open(fullUrl, '_blank');
+        }
+
+        function openTab(tabId, element) {
+            var contents = document.getElementsByClassName('tab-content');
+            for (var i = 0; i < contents.length; i++) contents[i].classList.remove('active');
+            var buttons = document.getElementsByClassName('tab-button');
+            for (var j = 0; j < buttons.length; j++) buttons[j].classList.remove('active');
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        function selectCardTab(tabType) {
+            var cards = document.querySelectorAll('.metrics-grid .card');
+            cards.forEach(c => c.classList.remove('active-card'));
+
+            document.querySelectorAll('.sub-stat').forEach(s => s.classList.remove('active-shift-card'));
+            document.getElementById("shiftFilterVal").value = "ALL";
+
+            var activeCard = document.getElementById('card-' + tabType);
+            if (activeCard) {
+                activeCard.classList.add('active-card');
+            }
+
+            document.getElementById("statusCardFilter").value = tabType;
+            var label = document.getElementById("viewLabel");
+
+            if (tabType === 'TODAY') {
+                var today = new Date().toISOString().split('T')[0];
+                document.getElementById("dateFilter").value = today;
+                label.innerText = "Viewing: Today's Tasks (All Statuses) 📅";
+            } else if (tabType === 'ALL') {
+                document.getElementById("dateFilter").value = "";
+                label.innerText = "Viewing: All Tasks History (All Dates) 📂";
+            } else if (tabType === 'PENDING') {
+                document.getElementById("dateFilter").value = "";
+                label.innerText = "Viewing: All Pending Tasks ⏳";
+            } else if (tabType === 'COMPLETED') {
+                document.getElementById("dateFilter").value = "";
+                label.innerText = "Viewing: All Completed Tasks ✅";
+            }
+
+            filterTable();
+        }
+
+        function filterByShift(shiftName) {
+            document.querySelectorAll('.sub-stat').forEach(s => s.classList.remove('active-shift-card'));
+
+            var label = document.getElementById("viewLabel");
+            var dateVal = document.getElementById("dateFilter").value;
+
+            if (shiftName === 'MORNING SHIFT TASKS') {
+                document.getElementById('shift-card-MORNING').classList.add('active-shift-card');
+                document.getElementById("shiftFilterVal").value = 'MORNING SHIFT TASKS';
+                label.innerText = "Viewing: Morning Shift Tasks (" + (dateVal || "All Dates") + ") 🌅";
+            } else if (shiftName === 'AFTERNOON SHIFT TASKS') {
+                document.getElementById('shift-card-AFTERNOON').classList.add('active-shift-card');
+                document.getElementById("shiftFilterVal").value = 'AFTERNOON SHIFT TASKS';
+                label.innerText = "Viewing: Afternoon Shift Tasks (" + (dateVal || "All Dates") + ") 🌆";
+            } else if (shiftName === 'NIGHT SHIFT TASKS') {
+                document.getElementById('shift-card-NIGHT').classList.add('active-shift-card');
+                document.getElementById("shiftFilterVal").value = 'NIGHT SHIFT TASKS';
+                label.innerText = "Viewing: Night Shift Tasks (" + (dateVal || "All Dates") + ") 🌙";
+            } else if (shiftName === 'CRITICAL') {
+                document.getElementById('shift-card-CRITICAL').classList.add('active-shift-card');
+                document.getElementById("shiftFilterVal").value = 'CRITICAL';
+                label.innerText = "Viewing: Critical P1/P2 Tasks (" + (dateVal || "All Dates") + ") 🚨";
+            }
+
+            filterTable();
+        }
+
+        function onDatePickerChange() {
+            var dateVal = document.getElementById("dateFilter").value;
+            var label = document.getElementById("viewLabel");
+
+            var cards = document.querySelectorAll('.metrics-grid .card');
+            cards.forEach(c => c.classList.remove('active-card'));
+            document.getElementById("statusCardFilter").value = "CUSTOM_DATE";
+
+            if (dateVal) {
+                label.innerText = "Viewing: All Tasks for Date " + dateVal + " 📅";
+            } else {
+                label.innerText = "Viewing: All Tasks 📂";
+            }
+            filterTable();
+        }
+
+        function openTaskViewModal(btn) {
+            var ticket = btn.getAttribute('data-ticket');
+            var cust = btn.getAttribute('data-customer');
+            var shift = btn.getAttribute('data-shift');
+            var from = btn.getAttribute('data-from');
+            var to = btn.getAttribute('data-to');
+            var status = btn.getAttribute('data-status');
+            var desc = btn.getAttribute('data-desc');
+            var comments = btn.getAttribute('data-comments');
+            var notes = btn.getAttribute('data-notes');
+            var prio = btn.getAttribute('data-priority') || 'P3';
+            var logged = btn.getAttribute('data-logged');
+            var origDate = btn.getAttribute('data-origdate');
+
+            document.getElementById('view_ticket_cust').innerHTML = "<a onclick=\"openServiceNowTicket('" + ticket + "')\" class='snow-link'><code>" + ticket + "</code></a> (" + cust + ")";
+            document.getElementById('view_shift_route').innerHTML = "<b>" + shift + "</b><br>From: 👤 " + from + " ➔ To: 👤 " + to;
+            document.getElementById('view_status_date').innerHTML = "Status: <b>" + status + "</b><br>Orig Created: <small>" + origDate + "</small>";
+            document.getElementById('view_desc').innerText = desc;
+            document.getElementById('view_notes').innerText = notes || "No handover notes added.";
+            document.getElementById('view_comments').innerText = comments || "No specific work notes or playbook links logged for this entry.";
+
+            document.getElementById('view_prio_badge').innerHTML = "<span class='badge-priority p-" + prio + "'>" + prio + " Priority</span>";
+
+            document.getElementById('viewModal').style.display = 'block';
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewModal').style.display = 'none';
+        }
+
+        function openTaskEditModal(btn) {
+            document.getElementById('edit_task_id').value = btn.getAttribute('data-id');
+            document.getElementById('edit_shift_name').value = btn.getAttribute('data-shift');
+            document.getElementById('edit_customer').value = btn.getAttribute('data-customer');
+            document.getElementById('edit_ticket_no').value = btn.getAttribute('data-ticket');
+            document.getElementById('edit_task_description').value = btn.getAttribute('data-desc');
+            document.getElementById('edit_resource_from').value = btn.getAttribute('data-from');
+            document.getElementById('edit_resource_to').value = btn.getAttribute('data-to');
+            document.getElementById('edit_status').value = btn.getAttribute('data-status');
+            document.getElementById('edit_comments').value = btn.getAttribute('data-comments') || '';
+            document.getElementById('edit_handover_notes').value = btn.getAttribute('data-notes') || '';
+
+            var prio = btn.getAttribute('data-priority') || 'P3';
+            document.getElementById('edit_priority').value = prio;
+            toggleEmailInput('edit');
+
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        function openEditUserModal(btn) {
+            document.getElementById('edit_user_id').value = btn.getAttribute('data-userid');
+            document.getElementById('edit_user_username').value = btn.getAttribute('data-username');
+            document.getElementById('edit_user_fullname').value = btn.getAttribute('data-fullname');
+            document.getElementById('edit_user_email').value = btn.getAttribute('data-email');
+            document.getElementById('edit_user_team').value = btn.getAttribute('data-team');
+            document.getElementById('edit_user_role').value = btn.getAttribute('data-role');
+            document.getElementById('editUserModal').style.display = 'block';
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').style.display = 'none';
+        }
+
+        function filterTable() {
+            var searchInput = document.getElementById("searchInput").value.toUpperCase();
+            var dateInput = document.getElementById("dateFilter").value;
+            var statusFilter = document.getElementById("statusCardFilter").value;
+            var shiftFilter = document.getElementById("shiftFilterVal").value;
+
+            var table = document.getElementById("taskTable");
+            var tr = table.getElementsByTagName("tr");
+
+            for (var i = 1; i < tr.length; i++) {
+                var rowVisible = true;
+                var rowText = tr[i].textContent || tr[i].innerText;
+                var dateCell = tr[i].querySelector(".task-date");
+                var statusCell = tr[i].querySelector(".task-status-val");
+                var shiftCell = tr[i].querySelector(".task-shift-val");
+                var prioCell = tr[i].querySelector(".task-prio-val");
+
+                if (searchInput && rowText.toUpperCase().indexOf(searchInput) === -1) {
+                    rowVisible = false;
+                }
+
+                if (dateInput && dateCell && dateCell.textContent.indexOf(dateInput) === -1) {
+                    rowVisible = false;
+                }
+
+                if (statusFilter && statusCell) {
+                    var currentStatus = statusCell.textContent.trim();
+                    if (statusFilter === 'PENDING' && (currentStatus === 'COMPLETED' || currentStatus === 'CARRIED_FORWARD')) {
+                        rowVisible = false;
+                    } else if (statusFilter === 'COMPLETED' && currentStatus !== 'COMPLETED') {
+                        rowVisible = false;
+                    }
+                }
+
+                if (shiftFilter && shiftFilter !== 'ALL') {
+                    if (shiftFilter === 'CRITICAL') {
+                        var currentPrio = prioCell ? prioCell.textContent.trim() : '';
+                        if (currentPrio !== 'P1' && currentPrio !== 'P2') {
+                            rowVisible = false;
+                        }
+                    } else if (shiftCell) {
+                        var currentShift = shiftCell.textContent.trim();
+                        if (currentShift !== shiftFilter) {
+                            rowVisible = false;
+                        }
+                    }
+                }
+
+                tr[i].style.display = rowVisible ? "" : "none";
+            }
+        }
+
+        function filterAuditTable() {
+            var searchInput = document.getElementById("auditSearchInput").value.toUpperCase();
+            var table = document.getElementById("auditTable");
+            var tr = table.getElementsByTagName("tr");
+
+            for (var i = 1; i < tr.length; i++) {
+                var rowText = tr[i].textContent || tr[i].innerText;
+                if (rowText.toUpperCase().indexOf(searchInput) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+
+        function resetAllFilters() {
+            document.getElementById("searchInput").value = "";
+            document.querySelectorAll('.sub-stat').forEach(s => s.classList.remove('active-shift-card'));
+            document.getElementById("shiftFilterVal").value = "ALL";
+            selectCardTab('TODAY');
+        }
+    </script>
+</body>
+</html>
